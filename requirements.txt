@@ -1,0 +1,37 @@
+# MotionAGFormer base dependencies
+torch>=2.7.0
+torchvision>=0.22.0
+numpy>=2.3.0
+scipy>=1.7.0
+matplotlib>=3.10.0
+tqdm>=4.67.0
+pyyaml>=6.0
+pillow>=11.0.0
+h5py>=3.7.0
+opencv-python>=4.6.0
+
+# MotionAGFormer specific
+timm==0.6.11
+easydict
+wandb
+torchprofile
+smplx
+numba
+scikit-image
+filterpy
+yacs
+
+# Mamba dependencies (fallback to simple alternatives if install fails)
+# mamba-ssm>=1.2.0
+# causal-conv1d>=1.2.0
+einops>=0.6.0
+transformers>=4.35.0
+
+# Graph neural network dependencies
+# torch-geometric>=2.3.0
+# torch-scatter>=2.1.0  
+# torch-sparse>=0.6.0
+
+# Additional utilities
+argparse
+json5 
