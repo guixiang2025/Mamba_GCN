@@ -1,0 +1,191 @@
+{
+  "validation_time": "20250709_170750",
+  "validation_steps": {
+    "environment": {
+      "status": "pass",
+      "checks": {
+        "python_version": {
+          "status": true,
+          "value": "3.8.10",
+          "requirement": ">=3.8"
+        },
+        "torch": {
+          "status": true,
+          "error": null
+        },
+        "numpy": {
+          "status": true,
+          "error": null
+        },
+        "matplotlib": {
+          "status": true,
+          "error": null
+        },
+        "mamba_ssm": {
+          "status": false,
+          "error": "Not installed"
+        },
+        "cuda": {
+          "status": true
+        }
+      }
+    },
+    "project_structure": {
+      "status": "pass",
+      "structure": {
+        "model": {
+          "exists": true,
+          "description": "Core model code"
+        },
+        "data": {
+          "exists": true,
+          "description": "Data processing"
+        },
+        "utils": {
+          "exists": true,
+          "description": "Utility functions"
+        },
+        "configs": {
+          "exists": true,
+          "description": "Configuration files"
+        },
+        "docs": {
+          "exists": true,
+          "description": "Documentation"
+        },
+        "tests": {
+          "exists": true,
+          "description": "Test files"
+        },
+        "scripts": {
+          "exists": true,
+          "description": "Utility scripts"
+        },
+        "README.md": {
+          "exists": true,
+          "description": "Project documentation",
+          "size": 11502
+        },
+        "requirements.txt": {
+          "exists": true,
+          "description": "Python dependencies",
+          "size": 900
+        },
+        "train.py": {
+          "exists": true,
+          "description": "Main training script",
+          "size": 15785
+        },
+        "demo.py": {
+          "exists": true,
+          "description": "Demo script",
+          "size": 18994
+        },
+        "LICENSE": {
+          "exists": true,
+          "description": "License file",
+          "size": 1074
+        },
+        "model/MotionAGFormer.py": {
+          "exists": true
+        },
+        "model/modules/mamba_gcn_block.py": {
+          "exists": true
+        },
+        "model/modules/mamba_layer.py": {
+          "exists": true
+        },
+        "model/modules/gcn_layer.py": {
+          "exists": true
+        }
+      }
+    },
+    "documentation": {
+      "status": "pass",
+      "docs": {
+        "README.md": {
+          "has_title": true,
+          "has_installation": true,
+          "has_usage": true,
+          "has_architecture": true,
+          "sufficient_length": true
+        },
+        "technical_docs": {
+          "count": 10,
+          "files": [
+            "TASK_2_4_QUALITY_CHECK_REPORT.md",
+            "PRD.md",
+            "PRD2.md",
+            "ENVIRONMENT_SETUP_COMPLETE.md",
+            "TASK_2_2_COMPLETION_REPORT.md",
+            "ToDoLists.md",
+            "TASK_2_1_COMPLETION_REPORT.md",
+            "DAY1_MORNING_COMPLETION_SUMMARY.md",
+            "TASK_2_3_POC_TRAINING_REPORT.md",
+            "DAY1_CHECKPOINT.md"
+          ]
+        }
+      }
+    },
+    "quick_start": {
+      "status": "pass",
+      "tests": {
+        "model_import": {
+          "status": true
+        },
+        "baseline_creation": {
+          "status": true
+        },
+        "mamba_gcn_creation": {
+          "status": true
+        },
+        "forward_pass": {
+          "status": true,
+          "output_shape": [
+            2,
+            9,
+            17,
+            3
+          ],
+          "expected_shape": [
+            2,
+            9,
+            17,
+            3
+          ]
+        }
+      }
+    },
+    "end_to_end": {
+      "status": "fail",
+      "tests": {
+        "validation_script": {
+          "status": false,
+          "script": "tests/poc_training_validation.py",
+          "returncode": 1,
+          "stdout_lines": 1,
+          "stderr_lines": 5
+        },
+        "mini_integration": {
+          "status": false,
+          "error": "selected index k out of range"
+        }
+      }
+    }
+  },
+  "overall_status": "good",
+  "issues": [
+    "Validation script failed: tests/poc_training_validation.py",
+    "Integration test failed: selected index k out of range"
+  ],
+  "recommendations": [
+    "Install Mamba SSM for full functionality"
+  ],
+  "summary": {
+    "total_steps": 5,
+    "passed_steps": 4,
+    "partial_steps": 0,
+    "failed_steps": 1,
+    "pass_rate": 0.8
+  }
+}

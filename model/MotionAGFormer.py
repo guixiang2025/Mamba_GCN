@@ -8,6 +8,7 @@ from model.modules.attention import Attention
 from model.modules.graph import GCN
 from model.modules.mlp import MLP
 from model.modules.tcn import MultiScaleTCN
+from model.modules.mamba_gcn_block import MambaGCNBlock
 
 
 class AGFormerBlock(nn.Module):
@@ -34,7 +35,8 @@ class AGFormerBlock(nn.Module):
         elif mixer_type == "ms-tcn":
             self.mixer = MultiScaleTCN(in_channels=dim, out_channels=dim)
         else:
-            raise NotImplementedError("AGFormer mixer_type is either attention or graph")
+            raise NotImplementedError(
+                "AGFormer mixer_type is either attention or graph")
         self.norm2 = nn.LayerNorm(dim)
 
         mlp_hidden_dim = int(dim * mlp_ratio)
@@ -42,11 +44,14 @@ class AGFormerBlock(nn.Module):
                        act_layer=act_layer, drop=drop)
 
         # The following two techniques are useful to train deep GraphFormers.
-        self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
+        self.drop_path = DropPath(
+            drop_path) if drop_path > 0. else nn.Identity()
         self.use_layer_scale = use_layer_scale
         if use_layer_scale:
-            self.layer_scale_1 = nn.Parameter(layer_scale_init_value * torch.ones(dim), requires_grad=True)
-            self.layer_scale_2 = nn.Parameter(layer_scale_init_value * torch.ones(dim), requires_grad=True)
+            self.layer_scale_1 = nn.Parameter(
+                layer_scale_init_value * torch.ones(dim), requires_grad=True)
+            self.layer_scale_2 = nn.Parameter(
+                layer_scale_init_value * torch.ones(dim), requires_grad=True)
 
     def forward(self, x):
         """
@@ -68,24 +73,30 @@ class AGFormerBlock(nn.Module):
 class MotionAGFormerBlock(nn.Module):
     """
     Implementation of MotionAGFormer block. It has two ST and TS branches followed by adaptive fusion.
+    Can be extended with MambaGCN branch for three-branch architecture.
     """
 
     def __init__(self, dim, mlp_ratio=4., act_layer=nn.GELU, attn_drop=0., drop=0., drop_path=0.,
                  num_heads=8, use_layer_scale=True, qkv_bias=False, qk_scale=None, layer_scale_init_value=1e-5,
                  use_adaptive_fusion=True, hierarchical=False, use_temporal_similarity=True,
-                 temporal_connection_len=1, use_tcn=False, graph_only=False, neighbour_num=4, n_frames=243):
+                 temporal_connection_len=1, use_tcn=False, graph_only=False, neighbour_num=4, n_frames=243,
+                 use_mamba_gcn=False, mamba_gcn_use_mamba=True, mamba_gcn_use_attention=False):
         super().__init__()
         self.hierarchical = hierarchical
-        dim = dim // 2 if hierarchical else dim
+        self.use_mamba_gcn = use_mamba_gcn
+
+        # For hierarchical mode: split into branches
+        # For non-hierarchical: all branches use full dimension
+        branch_dim = dim // 2 if hierarchical else dim
 
         # ST Attention branch
-        self.att_spatial = AGFormerBlock(dim, mlp_ratio, act_layer, attn_drop, drop, drop_path, num_heads, qkv_bias,
+        self.att_spatial = AGFormerBlock(branch_dim, mlp_ratio, act_layer, attn_drop, drop, drop_path, num_heads, qkv_bias,
                                          qk_scale, use_layer_scale, layer_scale_init_value,
                                          mode='spatial', mixer_type="attention",
                                          use_temporal_similarity=use_temporal_similarity,
                                          neighbour_num=neighbour_num,
                                          n_frames=n_frames)
-        self.att_temporal = AGFormerBlock(dim, mlp_ratio, act_layer, attn_drop, drop, drop_path, num_heads, qkv_bias,
+        self.att_temporal = AGFormerBlock(branch_dim, mlp_ratio, act_layer, attn_drop, drop, drop_path, num_heads, qkv_bias,
                                           qk_scale, use_layer_scale, layer_scale_init_value,
                                           mode='temporal', mixer_type="attention",
                                           use_temporal_similarity=use_temporal_similarity,
@@ -94,20 +105,21 @@ class MotionAGFormerBlock(nn.Module):
 
         # ST Graph branch
         if graph_only:
-            self.graph_spatial = GCN(dim, dim,
+            self.graph_spatial = GCN(branch_dim, branch_dim,
                                      num_nodes=17,
                                      mode='spatial')
             if use_tcn:
-                self.graph_temporal = MultiScaleTCN(in_channels=dim, out_channels=dim)
+                self.graph_temporal = MultiScaleTCN(
+                    in_channels=branch_dim, out_channels=branch_dim)
             else:
-                self.graph_temporal = GCN(dim, dim,
+                self.graph_temporal = GCN(branch_dim, branch_dim,
                                           num_nodes=n_frames,
                                           neighbour_num=neighbour_num,
                                           mode='temporal',
                                           use_temporal_similarity=use_temporal_similarity,
                                           temporal_connection_len=temporal_connection_len)
         else:
-            self.graph_spatial = AGFormerBlock(dim, mlp_ratio, act_layer, attn_drop, drop, drop_path, num_heads,
+            self.graph_spatial = AGFormerBlock(branch_dim, mlp_ratio, act_layer, attn_drop, drop, drop_path, num_heads,
                                                qkv_bias,
                                                qk_scale, use_layer_scale, layer_scale_init_value,
                                                mode='spatial', mixer_type="graph",
@@ -115,7 +127,7 @@ class MotionAGFormerBlock(nn.Module):
                                                temporal_connection_len=temporal_connection_len,
                                                neighbour_num=neighbour_num,
                                                n_frames=n_frames)
-            self.graph_temporal = AGFormerBlock(dim, mlp_ratio, act_layer, attn_drop, drop, drop_path, num_heads,
+            self.graph_temporal = AGFormerBlock(branch_dim, mlp_ratio, act_layer, attn_drop, drop, drop_path, num_heads,
                                                 qkv_bias,
                                                 qk_scale, use_layer_scale, layer_scale_init_value,
                                                 mode='temporal', mixer_type="ms-tcn" if use_tcn else 'graph',
@@ -124,14 +136,31 @@ class MotionAGFormerBlock(nn.Module):
                                                 neighbour_num=neighbour_num,
                                                 n_frames=n_frames)
 
+        # MambaGCN branch (optional third branch)
+        if use_mamba_gcn:
+            self.mamba_gcn = MambaGCNBlock(
+                dim=branch_dim,
+                num_joints=17,
+                use_mamba=mamba_gcn_use_mamba,
+                use_attention=mamba_gcn_use_attention
+            )
+
         self.use_adaptive_fusion = use_adaptive_fusion
         if self.use_adaptive_fusion:
-            self.fusion = nn.Linear(dim * 2, 2)
+            # Adjust fusion input size based on number of branches
+            fusion_input_dim = branch_dim * 3 if use_mamba_gcn else branch_dim * 2
+            fusion_output_dim = 3 if use_mamba_gcn else 2
+            self.fusion = nn.Linear(fusion_input_dim, fusion_output_dim)
             self._init_fusion()
 
     def _init_fusion(self):
         self.fusion.weight.data.fill_(0)
-        self.fusion.bias.data.fill_(0.5)
+        if self.use_mamba_gcn:
+            # Initialize for three branches with equal weights
+            self.fusion.bias.data.fill_(1.0 / 3.0)
+        else:
+            # Initialize for two branches with equal weights
+            self.fusion.bias.data.fill_(0.5)
 
     def forward(self, x):
         """
@@ -139,23 +168,52 @@ class MotionAGFormerBlock(nn.Module):
         """
         if self.hierarchical:
             B, T, J, C = x.shape
+            # Hierarchical mode: split input into two equal parts as per original design
             x_attn, x_graph = x[..., :C // 2], x[..., C // 2:]
 
             x_attn = self.att_temporal(self.att_spatial(x_attn))
             x_graph = self.graph_temporal(self.graph_spatial(x_graph + x_attn))
+
+            if self.use_mamba_gcn:
+                # For hierarchical + MambaGCN: use attention output for mamba processing
+                # MambaGCNBlock returns (output, info)
+                x_mamba, _ = self.mamba_gcn(x_attn)
         else:
+            # Non-hierarchical: all branches process full input
             x_attn = self.att_temporal(self.att_spatial(x))
             x_graph = self.graph_temporal(self.graph_spatial(x))
 
+            if self.use_mamba_gcn:
+                # MambaGCNBlock returns (output, info)
+                x_mamba, mamba_info = self.mamba_gcn(x)
+
+        # Fusion logic
         if self.hierarchical:
-            x = torch.cat((x_attn, x_graph), dim=-1)
+            if self.use_mamba_gcn:
+                x = torch.cat((x_attn, x_graph, x_mamba), dim=-1)
+            else:
+                x = torch.cat((x_attn, x_graph), dim=-1)
         elif self.use_adaptive_fusion:
-            alpha = torch.cat((x_attn, x_graph), dim=-1)
-            alpha = self.fusion(alpha)
-            alpha = alpha.softmax(dim=-1)
-            x = x_attn * alpha[..., 0:1] + x_graph * alpha[..., 1:2]
+            if self.use_mamba_gcn:
+                # Three-branch adaptive fusion
+                alpha = torch.cat((x_attn, x_graph, x_mamba), dim=-1)
+                alpha = self.fusion(alpha)
+                alpha = alpha.softmax(dim=-1)
+                x = (x_attn * alpha[..., 0:1] +
+                     x_graph * alpha[..., 1:2] +
+                     x_mamba * alpha[..., 2:3])
+            else:
+                # Two-branch adaptive fusion
+                alpha = torch.cat((x_attn, x_graph), dim=-1)
+                alpha = self.fusion(alpha)
+                alpha = alpha.softmax(dim=-1)
+                x = x_attn * alpha[..., 0:1] + x_graph * alpha[..., 1:2]
         else:
-            x = (x_attn + x_graph) * 0.5
+            # Simple averaging
+            if self.use_mamba_gcn:
+                x = (x_attn + x_graph + x_mamba) / 3.0
+            else:
+                x = (x_attn + x_graph) * 0.5
 
         return x
 
@@ -163,7 +221,8 @@ class MotionAGFormerBlock(nn.Module):
 def create_layers(dim, n_layers, mlp_ratio=4., act_layer=nn.GELU, attn_drop=0., drop_rate=0., drop_path_rate=0.,
                   num_heads=8, use_layer_scale=True, qkv_bias=False, qkv_scale=None, layer_scale_init_value=1e-5,
                   use_adaptive_fusion=True, hierarchical=False, use_temporal_similarity=True,
-                  temporal_connection_len=1, use_tcn=False, graph_only=False, neighbour_num=4, n_frames=243):
+                  temporal_connection_len=1, use_tcn=False, graph_only=False, neighbour_num=4, n_frames=243,
+                  use_mamba_gcn=False, mamba_gcn_use_mamba=True, mamba_gcn_use_attention=False):
     """
     generates MotionAGFormer layers
     """
@@ -187,7 +246,10 @@ def create_layers(dim, n_layers, mlp_ratio=4., act_layer=nn.GELU, attn_drop=0., 
                                           use_tcn=use_tcn,
                                           graph_only=graph_only,
                                           neighbour_num=neighbour_num,
-                                          n_frames=n_frames))
+                                          n_frames=n_frames,
+                                          use_mamba_gcn=use_mamba_gcn,
+                                          mamba_gcn_use_mamba=mamba_gcn_use_mamba,
+                                          mamba_gcn_use_attention=mamba_gcn_use_attention))
     layers = nn.Sequential(*layers)
 
     return layers
@@ -202,7 +264,7 @@ class MotionAGFormer(nn.Module):
                  drop=0., drop_path=0., use_layer_scale=True, layer_scale_init_value=1e-5, use_adaptive_fusion=True,
                  num_heads=4, qkv_bias=False, qkv_scale=None, hierarchical=False, num_joints=17,
                  use_temporal_similarity=True, temporal_connection_len=1, use_tcn=False, graph_only=False,
-                 neighbour_num=4, n_frames=243):
+                 neighbour_num=4, n_frames=243, use_mamba_gcn=False, mamba_gcn_use_mamba=True, mamba_gcn_use_attention=False):
         """
         :param n_layers: Number of layers.
         :param dim_in: Input dimension.
@@ -228,6 +290,9 @@ class MotionAGFormer(nn.Module):
         :param graph_only: Uses GCN instead of GraphFormer in the graph branch.
         :param neighbour_num: Number of neighbors for temporal GCN similarity.
         :param n_frames: Number of frames. Default is 243
+        :param use_mamba_gcn: Whether to use MambaGCN as a third branch. Default is False.
+        :param mamba_gcn_use_mamba: Whether to use Mamba in MambaGCN branch. Default is True.
+        :param mamba_gcn_use_attention: Whether to use Attention in MambaGCN branch. Default is False.
         """
         super().__init__()
 
@@ -254,7 +319,10 @@ class MotionAGFormer(nn.Module):
                                     use_tcn=use_tcn,
                                     graph_only=graph_only,
                                     neighbour_num=neighbour_num,
-                                    n_frames=n_frames)
+                                    n_frames=n_frames,
+                                    use_mamba_gcn=use_mamba_gcn,
+                                    mamba_gcn_use_mamba=mamba_gcn_use_mamba,
+                                    mamba_gcn_use_attention=mamba_gcn_use_attention)
 
         self.rep_logit = nn.Sequential(OrderedDict([
             ('fc', nn.Linear(dim_feat, dim_rep)),
@@ -306,7 +374,7 @@ def _test():
         _ = model(random_x)
 
     import time
-    num_iterations = 100 
+    num_iterations = 100
     # Measure the inference time for 'num_iterations' iterations
     start_time = time.time()
     for _ in range(num_iterations):
@@ -321,11 +389,11 @@ def _test():
     fps = 1.0 / average_inference_time
 
     print(f"FPS: {fps}")
-    
 
     out = model(random_x)
 
-    assert out.shape == (b, t, j, 3), f"Output shape should be {b}x{t}x{j}x3 but it is {out.shape}"
+    assert out.shape == (
+        b, t, j, 3), f"Output shape should be {b}x{t}x{j}x3 but it is {out.shape}"
 
 
 if __name__ == '__main__':

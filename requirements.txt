@@ -1,37 +1,42 @@
-# MotionAGFormer base dependencies
-torch>=2.7.0
-torchvision>=0.22.0
-numpy>=2.3.0
+# MotionAGFormer + MambaGCN Requirements
+# Core Dependencies
+torch>=2.4.0
+torchvision>=0.19.0
+torchaudio>=2.4.0
+
+# Mamba State Space Model
+mamba-ssm>=1.0.0
+
+# Data Processing & Scientific Computing
+numpy>=1.21.0
 scipy>=1.7.0
-matplotlib>=3.10.0
-tqdm>=4.67.0
-pyyaml>=6.0
-pillow>=11.0.0
-h5py>=3.7.0
-opencv-python>=4.6.0
+matplotlib>=3.5.0
+pillow>=8.3.0
 
-# MotionAGFormer specific
-timm==0.6.11
-easydict
+# Deep Learning Utilities
+timm>=0.9.0
+tqdm>=4.62.0
+easydict>=1.9
+
+# Configuration & Logging
+PyYAML>=6.0
+tensorboard>=2.8.0
+
+# Optional: Weights & Biases (for experiment tracking)
 wandb
-torchprofile
-smplx
-numba
-scikit-image
-filterpy
-yacs
 
-# Mamba dependencies (fallback to simple alternatives if install fails)
-# mamba-ssm>=1.2.0
-# causal-conv1d>=1.2.0
-einops>=0.6.0
-transformers>=4.35.0
+# Optional: CUDA accelerated libraries
+# Uncomment if you want faster training on GPU
+# ninja
+# flash-attn>=2.0.0
 
-# Graph neural network dependencies
-# torch-geometric>=2.3.0
-# torch-scatter>=2.1.0  
-# torch-sparse>=0.6.0
+# Development & Testing (optional)
+pytest>=6.0.0
+black>=21.0.0
+flake8>=3.9.0
 
-# Additional utilities
-argparse
-json5 
+# Note: For CPU-only installation, use:
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+#
+# For CUDA 12.1 installation, use:
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121 
