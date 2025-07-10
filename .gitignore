@@ -70,3 +70,14 @@ Thumbs.db
 *.tmp
 *.temp
 ~*
+data/motion3d/human36m/raw/__init__.py
+data/motion3d/human36m/raw/const.py
+data/motion3d/human36m/raw/preprocess/__init__.py
+data/motion3d/human36m/raw/preprocess/data_to_npz_3dhp_test.py
+data/motion3d/human36m/raw/preprocess/data_to_npz_3dhp.py
+data/motion3d/human36m/raw/preprocess/h36m.py
+data/motion3d/human36m/raw/preprocess/visualize.py
+data/motion3d/human36m/raw/reader/__init__.py
+data/motion3d/human36m/raw/reader/generator_3dhp.py
+data/motion3d/human36m/raw/reader/h36m.py
+data/motion3d/human36m/raw/reader/motion_dataset.py
