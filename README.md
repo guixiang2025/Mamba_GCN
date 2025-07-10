@@ -89,12 +89,26 @@ python data/create_mock_data.py
 **选项 B: 使用真实 Human3.6M 数据**
 
 ```bash
-# 1. 下载预处理数据 (约 2GB)
-# 请参考 MotionBERT 文档下载到 data/motion3d/
+# 1. 手动下载真实数据 (约 2GB)
+# 下载链接: https://drive.google.com/file/d/1WWoVAae7YKKKZpa1goO_7YcwVFNR528S/view?usp=sharing
+# 详细说明: 参考 data/motion3d/human36m/MANUAL_DOWNLOAD_INSTRUCTIONS.md
 
-# 2. 数据预处理
-cd data/preprocess
-python h36m.py --n-frames 243
+# 2. 数据存放路径
+# 将下载的文件解压到: data/motion3d/human36m/raw/motion3d/
+# 预期文件结构:
+# data/motion3d/human36m/raw/motion3d/
+# ├── h36m_sh_conf_cam_source_final.pkl (1.0GB)
+# ├── data_train_3dhp.npz (509MB)  
+# ├── data_test_3dhp.npz (12MB)
+# └── H36M-243/
+#     ├── train/ (17,748 files)
+#     └── test/ (2,228 files)
+
+# 3. 数据迁移 (从 Mock 数据切换到真实数据)
+python scripts/tools/migrate_to_real_data.py --backup
+
+# 4. 验证数据加载
+python test_real_data.py
 ```
 
 ### 🔧 配置说明
@@ -171,17 +185,27 @@ python train_mock.py --epochs 5 --batch_size 16
 #### 完整训练 (真实数据)
 
 ```bash
-# 使用配置文件训练
-python train.py --config configs/h36m/MotionAGFormer-base.yaml
+# 使用真实 Human3.6M 数据训练 (推荐)
+python scripts/train_real.py --model_type mamba_gcn --epochs 20 --batch_size 64
 
-# 启用 MambaGCN 的训练 (需要自定义配置)
-python train.py --config configs/h36m/MotionAGFormer-mamba-gcn.yaml
+# 不同模型配置的训练:
+# 基线模型
+python scripts/train_real.py --model_type baseline --epochs 20
+
+# MambaGCN 模型  
+python scripts/train_real.py --model_type mamba_gcn --epochs 20
+
+# 完整架构 (Mamba + GCN + Attention)
+python scripts/train_real.py --model_type full --epochs 20
+
+# 使用原始配置文件训练
+python train.py --config configs/h36m/MotionAGFormer-base.yaml
 ```
 
 ### 🧪 测试和验证
 
 ```bash
-# 端到端验证
+# 端到端验证 (Mock 数据)
 python end_to_end_validation.py
 
 # 错误处理测试
@@ -189,6 +213,15 @@ python error_handling_validation.py
 
 # 模型集成测试
 python test_model_integration.py
+
+# 真实数据验证
+python test_real_data.py
+
+# 最终交付验证 (真实数据)
+python final_delivery_validation_real.py
+
+# 数据性能比较 (Mock vs Real)
+python compare_data_performance.py
 
 # 查看使用示例
 python example_usage.py
@@ -308,10 +341,33 @@ python train_mock.py --device cpu
 
 **Q: 数据维度不匹配**
 ```bash
-# 检查数据格式
+# 检查 Mock 数据格式
 python data/create_mock_data.py
-# 验证数据加载
-python -c "from data.reader.mock_h36m import DataReaderMockH36M; print('Data OK')"
+# 验证 Mock 数据加载
+python -c "from data.reader.mock_h36m import DataReaderMockH36M; print('Mock Data OK')"
+
+# 检查真实数据格式
+python test_real_data.py
+# 验证真实数据加载
+python -c "from data.reader.real_h36m import DataReaderRealH36M; print('Real Data OK')"
+```
+
+**Q: 如何从 Mock 数据切换到真实数据？**
+```bash
+# 运行数据迁移脚本
+python scripts/tools/migrate_to_real_data.py --backup
+
+# 验证迁移结果
+python test_real_data.py
+```
+
+**Q: 真实数据下载失败或文件损坏**
+```bash
+# 检查数据完整性
+python scripts/tools/migrate_to_real_data.py --check-only
+
+# 重新下载数据
+# 参考: data/motion3d/human36m/MANUAL_DOWNLOAD_INSTRUCTIONS.md
 ```
 
 ### 📈 性能调优
