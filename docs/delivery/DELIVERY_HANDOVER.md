@@ -87,8 +87,6 @@ python3 final_delivery_validation_real.py
 
 # 立即开始训练 (推荐)
 ./quick_start_training.sh mamba_gcn base 1
-
-# 高性能多GPU训练
 ./quick_start_training.sh full large 4
 ```
 

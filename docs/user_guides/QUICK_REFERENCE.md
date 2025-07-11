@@ -47,10 +47,6 @@ python3 scripts/train_real.py --model_type full --epochs 200 --batch_size 48
 ```
 
 ### 高性能配置
-```bash
-# 大模型 + 多GPU
-python3 -m torch.distributed.launch --nproc_per_node=4 scripts/train_real.py \
-    --config configs/h36m/MotionAGFormer-large.yaml \
     --model_type mamba_gcn --epochs 300 --batch_size 16
 ```
 

@@ -129,39 +129,6 @@ python3 scripts/train_real.py \
     --batch_size 32 \
     --device cuda
 ```
-
-#### 多GPU训练 (推荐)
-```bash
-# 使用PyTorch DataParallel
-python3 -m torch.distributed.launch \
-    --nproc_per_node=4 \
-    scripts/train_real.py \
-    --config configs/h36m/MotionAGFormer-large.yaml \
-    --model_type full \
-    --epochs 300 \
-    --batch_size 16 \
-    --device cuda
-```
-
-#### 集群训练脚本
-```bash
-#!/bin/bash
-#SBATCH --job-name=mamba_gcn_training
-#SBATCH --nodes=2
-#SBATCH --ntasks-per-node=4
-#SBATCH --cpus-per-task=8
-#SBATCH --gres=gpu:4
-#SBATCH --time=72:00:00
-
-# 加载环境
-module load python/3.8
-module load cuda/12.1
-source venv/bin/activate
-
-# 训练命令
-srun python3 scripts/train_real.py \
-    --config configs/h36m/MotionAGFormer-large.yaml \
-    --model_type full \
     --epochs 500 \
     --batch_size 8 \
     --device cuda \
@@ -759,7 +726,6 @@ EOF
    - 及时清理中间变量
 
 3. **训练加速**:
-   - 使用多GPU训练
    - 启用编译优化 (`torch.compile`)
    - 优化数据预处理pipeline
 
