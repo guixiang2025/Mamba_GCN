@@ -38,7 +38,6 @@ class TrainingLogger:
 
         self.metrics = {
             'train_losses': [],
-            'train_mpjpe': [],
             'test_mpjpe': [],
             'epoch_times': [],
             'learning_rates': [],
@@ -303,14 +302,14 @@ def generate_training_report(save_dir, metrics, initial_mpjpe, best_mpjpe, total
             f"| 平均每epoch | {total_time / len(metrics['test_mpjpe']):.1f}秒 |\n\n")
 
         f.write("## 📈 逐Epoch结果\n\n")
-        f.write("| Epoch | 训练损失 | 训练MPJPE | 测试MPJPE | 改善% | 用时(s) |\n")
-        f.write("|-------|----------|-----------|-----------|--------|--------|\n")
+        f.write("| Epoch | 训练损失 | MPJPE | 改善% | 用时(s) |\n")
+        f.write("|-------|----------|-------|--------|--------|\n")
 
         for i in range(len(metrics['test_mpjpe'])):
             improvement = (initial_mpjpe -
                            metrics['test_mpjpe'][i]) / initial_mpjpe * 100
             f.write(
-                f"| {i+1} | {metrics['train_losses'][i]:.4f} | {metrics['train_mpjpe'][i]:.2f}mm | {metrics['test_mpjpe'][i]:.2f}mm | {improvement:+.1f}% | {metrics['epoch_times'][i]:.1f}s |\n")
+                f"| {i+1} | {metrics['train_losses'][i]:.4f} | {metrics['test_mpjpe'][i]:.2f}mm | {improvement:+.1f}% | {metrics['epoch_times'][i]:.1f}s |\n")
 
         f.write("\n## 🏆 结论\n\n")
         if best_mpjpe < initial_mpjpe * 0.8:
@@ -441,9 +440,6 @@ def main():
         # Evaluate
         test_mpjpe = evaluate(model, test_loader, device, logger)
 
-        # Convert training loss to mm scale
-        train_mpjpe = train_loss * 1000
-
         # Update learning rate
         current_lr = optimizer.param_groups[0]['lr']
         scheduler.step()
@@ -456,7 +452,6 @@ def main():
 
         # Record metrics
         logger.metrics['train_losses'].append(train_loss)
-        logger.metrics['train_mpjpe'].append(train_mpjpe)
         logger.metrics['test_mpjpe'].append(test_mpjpe)
         logger.metrics['epoch_times'].append(epoch_time)
         logger.metrics['learning_rates'].append(current_lr)
@@ -464,8 +459,7 @@ def main():
 
         # Log epoch results
         logger.log(f"   训练损失: {train_loss:.6f}")
-        logger.log(f"   训练MPJPE: {train_mpjpe:.2f}mm")
-        logger.log(f"   测试MPJPE: {test_mpjpe:.2f}mm")
+        logger.log(f"   MPJPE: {test_mpjpe:.2f}mm")
         logger.log(f"   性能改善: {improvement:+.1f}%")
         logger.log(f"   学习率: {current_lr:.2e}")
         logger.log(f"   用时: {epoch_time:.1f}秒")
