@@ -52,3 +52,8 @@ lambda_av: 0.0
 # Augmentation
 use_proj_as_2d: False
 flip: True
+
+# Training Configuration (can be overridden by command line)
+model_type: baseline  # baseline, mamba_gcn, full
+device: cuda:0  # auto, cpu, cuda, cuda:0, cuda:1
+save_dir: checkpoints/real_h36m_enhanced
